@@ -1,0 +1,11 @@
+[package]
+name = "i3lp"
+version = "0.1.0"
+authors = ["Cassaundra <cass@cassaundra.io>"]
+edition = "2018"
+
+[dependencies]
+clap = "2.33.0"
+i3ipc = "0.10.0"
+# launchpad = { git = "https://github.com/cassaundra/launch-rs.git" }
+launchpad = { path = "../launch-rs" }
