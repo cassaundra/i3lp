@@ -14,8 +14,6 @@ fn main() {
 
     println!("{}", connection.get_version().unwrap().human_readable);
 
-    // connection.run_command("fullscreen").unwrap();
-
     // config
     let mut colors: HashMap<String, RGBColor> = HashMap::new();
     colors.insert("Firefox".to_string(), RGBColor::new(0xFF, 0x6A, 0x11));
@@ -42,9 +40,16 @@ fn main() {
             match event {
                 Event::Press(Location::Pad(x, y)) => {
                     if let Some(workspace) = workspaces.get(x as usize) {
-                        let windows = &workspace_windows[&workspace.name];
-                        if let Some(window) = windows.get(y as usize) {
-                            connection.run_command(&format!("[con_id=\"{}\"] focus", window.id)).unwrap();
+                        if let Some(windows) = &workspace_windows.get(&workspace.name) {
+                            if let Some(window) = windows.get(y as usize) {
+                                connection
+                                    .run_command(&format!("[con_id=\"{}\"] focus", window.id))
+                                    .unwrap();
+                            } else {
+                                connection
+                                    .run_command(&format!("workspace {}", workspace.name))
+                                    .unwrap();
+                            }
                         }
                     }
                 }
@@ -112,24 +117,25 @@ impl Program {
     }
 
     pub fn render(
-        &self, launchpad: &mut LaunchpadBuffer, workspaces: &Vec<Workspace>, workspace_windows: HashMap<String, Vec<&Node>>,
+        &self, launchpad: &mut LaunchpadBuffer, workspaces: &Vec<Workspace>,
+        workspace_windows: HashMap<String, Vec<&Node>>,
     ) {
         for (x, workspace) in workspaces.iter().take(8).enumerate() {
-            let windows = &workspace_windows[&workspace.name];
+            if let Some(windows) = &workspace_windows.get(&workspace.name) {
+                for (y, window) in windows.iter().take(8).enumerate() {
+                    let class: &str =
+                        &window.window_properties.as_ref().unwrap()[&WindowProperty::Class];
 
-            for (y, window) in windows.iter().take(8).enumerate() {
-                let class: &str =
-                    &window.window_properties.as_ref().unwrap()[&WindowProperty::Class];
+                    let color = if let Some(color) = &self.config.colors.get(class) {
+                        *color.clone()
+                    } else {
+                        RGBColor::new(0x80, 0x80, 0x80)
+                    };
 
-                let color = if let Some(color) = &self.config.colors.get(class) {
-                    *color.clone()
-                } else {
-                    RGBColor::new(0x80, 0x80, 0x80)
-                };
+                    let color = RGBColor(color.0 / 2, color.1 / 2, color.2 / 2);
 
-                let color = RGBColor(color.0 / 2, color.1 / 2, color.2 / 2);
-
-                launchpad.set(&Location::Pad(x as u8, y as u8), &color);
+                    launchpad.set(&Location::Pad(x as u8, y as u8), &color);
+                }
             }
         }
     }
@@ -164,15 +170,14 @@ fn is_workspace(node: &Node) -> bool {
 }
 
 fn is_window(node: &Node) -> bool {
-    if node.nodetype == NodeType::Con && node.nodes.is_empty() {
-        if let Some(properties) = &node.window_properties {
-            if properties.get(&WindowProperty::Class) == Some(&String::from("i3bar")) {
-                return false;
-            }
+    if let Some(properties) = &node.window_properties {
+        if properties.get(&WindowProperty::Class) != Some(&String::from("i3bar"))
+            && node.nodetype == NodeType::Con
+            && node.nodes.is_empty()
+        {
+            return true;
         }
-
-        true
-    } else {
-        false
     }
+
+    false
 }
