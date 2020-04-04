@@ -23,7 +23,7 @@ fn main() {
     colors.insert("discord".to_string(), RGBColor::new(0x51, 0x71, 0xFF));
     colors.insert("Xfce4-terminal".to_string(), RGBColor::new(0x16, 0x17, 0x20));
 
-    let program = Program::from_config(Config {
+    let mut program = Program::from_config(Config {
         colors,
     });
 
@@ -37,24 +37,7 @@ fn main() {
         let workspace_windows = find_workspace_windows(&root);
 
         for event in launchpad.poll() {
-            match event {
-                Event::Press(Location::Pad(x, y)) => {
-                    if let Some(workspace) = workspaces.get(x as usize) {
-                        if let Some(windows) = &workspace_windows.get(&workspace.name) {
-                            if let Some(window) = windows.get(y as usize) {
-                                connection
-                                    .run_command(&format!("[con_id=\"{}\"] focus", window.id))
-                                    .unwrap();
-                            } else {
-                                connection
-                                    .run_command(&format!("workspace {}", workspace.name))
-                                    .unwrap();
-                            }
-                        }
-                    }
-                }
-                _ => {}
-            }
+            program.handle_event(&event, &mut connection, &workspaces, &workspace_windows);
         }
 
         let mut buffer = LaunchpadBuffer::default();
@@ -132,11 +115,32 @@ impl Program {
                         RGBColor::new(0x80, 0x80, 0x80)
                     };
 
-                    let color = RGBColor(color.0 / 2, color.1 / 2, color.2 / 2);
+                    let color = RGBColor(color.0, color.1, color.2);
 
                     launchpad.set(&Location::Pad(x as u8, y as u8), &color);
                 }
             }
+        }
+    }
+
+    pub fn handle_event(&mut self, event: &Event, connection: &mut I3Connection, workspaces: &Vec<Workspace>, workspace_windows: &HashMap<String, Vec<&Node>>) {
+        match event {
+            Event::Press(Location::Pad(x, y)) => {
+                if let Some(workspace) = workspaces.get(*x as usize) {
+                    if let Some(windows) = &workspace_windows.get(&workspace.name) {
+                        if let Some(window) = windows.get(*y as usize) {
+                            connection
+                                .run_command(&format!("[con_id=\"{}\"] focus", window.id))
+                                .unwrap();
+                        } else {
+                            connection
+                                .run_command(&format!("workspace {}", workspace.name))
+                                .unwrap();
+                        }
+                    }
+                }
+            }
+            _ => {}
         }
     }
 }
