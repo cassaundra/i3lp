@@ -8,8 +8,12 @@ use std::path::Path;
 
 #[derive(Debug, Deserialize)]
 pub struct Config {
-    #[serde(with = "hex_color_format")]
-    pub colors: HashMap<String, RGBColor>,
+    #[serde(default)]
+    pub side: Side,
+    #[serde(deserialize_with = "hex_color_format::deserialize_color")]
+    pub default_color: RGBColor,
+    #[serde(deserialize_with = "hex_color_format::deserialize_map")]
+    pub class_colors: HashMap<String, RGBColor>,
 }
 
 impl Config {
@@ -20,6 +24,21 @@ impl Config {
     }
 }
 
+#[derive(Debug, Deserialize)]
+#[serde(rename_all = "lowercase")]
+pub enum Side {
+    Bottom,
+    Top,
+    Left,
+    Right,
+}
+
+impl Default for Side {
+    fn default() -> Side {
+        Side::Bottom
+    }
+}
+
 mod hex_color_format {
     use launchpad::RGBColor;
 
@@ -27,7 +46,7 @@ mod hex_color_format {
 
     use std::collections::HashMap;
 
-    pub fn deserialize<'de, D>(deserializer: D) -> Result<HashMap<String, RGBColor>, D::Error>
+    pub fn deserialize_map<'de, D>(deserializer: D) -> Result<HashMap<String, RGBColor>, D::Error>
     where
         D: Deserializer<'de>,
     {
@@ -36,6 +55,14 @@ mod hex_color_format {
             .map(|(k, v)| Ok((k, parse_hex_color(&v)?)))
             .collect::<Result<HashMap<String, RGBColor>, ParseHexError>>()
             .map_err(serde::de::Error::custom)
+    }
+
+    pub fn deserialize_color<'de, D>(deserializer: D) -> Result<RGBColor, D::Error>
+    where
+        D: Deserializer<'de>,
+    {
+        let s = String::deserialize(deserializer)?;
+        parse_hex_color(&s).map_err(serde::de::Error::custom)
     }
 
     pub fn parse_hex_color(s: &str) -> Result<RGBColor, ParseHexError> {
@@ -88,7 +115,8 @@ mod hex_color_format {
                 }),
             }?;
 
-            value |= v << (4 * i);
+            let shift = 4 * (s.len() - i - 1);
+            value |= v << shift;
         }
 
         Ok(value)
@@ -105,17 +133,20 @@ mod tests {
     fn test_hex_parse() {
         assert_eq!(parse_hex("00"), Ok(0));
         assert_eq!(parse_hex("FF"), Ok(255));
-        assert_eq!(parse_hex("2a"), Ok(162));
+        assert_eq!(parse_hex("2a"), Ok(42));
 
-        assert_eq!(parse_hex("9x"), Err(ParseHexError::InvalidCharacter {
-            character: 'x',
-            index: 1,
-        }));
+        assert_eq!(
+            parse_hex("9x"),
+            Err(ParseHexError::InvalidCharacter {
+                character: 'x',
+                index: 1,
+            })
+        );
         assert_eq!(parse_hex("FFFFFF"), Err(ParseHexError::InvalidLength));
     }
 
     #[test]
     fn test_color_parse() {
-        assert_eq!(parse_hex_color("FF34A8"), Ok(RGBColor::new(255, 67, 138)));
+        assert_eq!(parse_hex_color("FF34A8"), Ok(RGBColor::new(255, 52, 168)));
     }
 }

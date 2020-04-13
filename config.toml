@@ -1,0 +1,18 @@
+# The side of the launchpad the stacks will be oriented on
+side = "bottom"
+
+# Color to use if there is no corresponding class
+default_color = "808080"
+
+# Launchpad RGB colors by window class
+[class_colors]
+"Emacs" = "C133FF"
+"Firefox" = "FF6A11"
+"discord" = "5171FF"
+"Spotify" = "28FF73"
+"Thunderbird" = "1D2DB1"
+
+"Alacritty" = "161720"
+"konsole" = "161720"
+"Xfce4-terminal" = "161720"
+"XTerm" = "161720"

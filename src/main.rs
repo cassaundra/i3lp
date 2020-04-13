@@ -4,6 +4,7 @@ use launchpad::mk2::*;
 use launchpad::RGBColor;
 
 use std::collections::HashMap;
+use std::path::Path;
 
 pub mod config;
 use config::*;
@@ -17,18 +18,8 @@ fn main() -> crate::Result<()> {
 
     println!("{}", connection.get_version()?.human_readable);
 
-    // TODO config
-    let mut colors: HashMap<String, RGBColor> = HashMap::new();
-    colors.insert("Firefox".to_string(), RGBColor::new(0xFF, 0x6A, 0x11));
-    colors.insert("Emacs".to_string(), RGBColor::new(0xC1, 0x33, 0xFF));
-    colors.insert("Thunderbird".to_string(), RGBColor::new(0x1D, 0x2D, 0xB1));
-    colors.insert("Spotify".to_string(), RGBColor::new(0x28, 0xFF, 0x73));
-    colors.insert("discord".to_string(), RGBColor::new(0x51, 0x71, 0xFF));
-    colors.insert("Xfce4-terminal".to_string(), RGBColor::new(0x16, 0x17, 0x20));
-
-    let mut program = Program::from_config(Config {
-        colors,
-    });
+    let config = config::Config::from_file(&Path::new("config.toml"))?;
+    let mut program = Program::from_config(config);
 
     // let mut last_workspace_windows = None;
     let mut last_buffer = None;
@@ -114,10 +105,10 @@ impl Program {
                 for (y, window) in windows.iter().take(8).enumerate() {
                     let class: &str = &window.window_properties.as_ref().unwrap()[&WindowProperty::Class];
 
-                    let color = if let Some(color) = &self.config.colors.get(class) {
-                        *color.clone()
+                    let color = if let Some(color) = &self.config.class_colors.get(class) {
+                        color
                     } else {
-                        RGBColor::new(0x80, 0x80, 0x80)
+                        &self.config.default_color
                     };
 
                     let color = RGBColor(color.0, color.1, color.2);
