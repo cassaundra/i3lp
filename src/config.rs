@@ -38,7 +38,7 @@ mod hex_color_format {
         Ok(RGBColor(parse_hex(&s[..2])?, parse_hex(&s[2..4])?, parse_hex(&s[4..])?))
     }
 
-    #[derive(Debug)]
+    #[derive(Debug, PartialEq)]
     pub enum ParseHexError {
         InvalidCharacter {
             character: char,
@@ -53,7 +53,7 @@ mod hex_color_format {
         fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
             match self {
                 ParseHexError::InvalidCharacter {
-                    character: c,
+                    character: _c,
                     index: i,
                 } => write!(f, "invalid character at position {}", i),
                 ParseHexError::InvalidLength => write!(f, "invalid length, must be six characters"),
@@ -73,14 +73,14 @@ mod hex_color_format {
             let v = match c {
                 b'0'..=b'9' => Ok(c - b'0'),
                 b'A'..=b'F' => Ok(c - b'A' + 10),
-                b'a'..=b'a' => Ok(c - b'a' + 10),
+                b'a'..=b'f' => Ok(c - b'a' + 10),
                 _ => Err(ParseHexError::InvalidCharacter {
                     character,
                     index: i,
                 }),
             }?;
 
-            value &= v << (4 * i);
+            value |= v << (4 * i);
         }
 
         Ok(value)
@@ -89,10 +89,18 @@ mod hex_color_format {
 
 #[cfg(test)]
 mod tests {
-    use super::*;
+    use super::hex_color_format::*;
 
     #[test]
     fn test_hex_parse() {
-        parse_hex("");
+        assert_eq!(parse_hex("00"), Ok(0));
+        assert_eq!(parse_hex("FF"), Ok(255));
+        assert_eq!(parse_hex("2a"), Ok(162));
+
+        assert_eq!(parse_hex("9x"), Err(ParseHexError::InvalidCharacter {
+            character: 'x',
+            index: 1,
+        }));
+        assert_eq!(parse_hex("FFFFFF"), Err(ParseHexError::InvalidLength));
     }
 }
