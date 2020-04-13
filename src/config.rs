@@ -3,6 +3,8 @@ use launchpad::RGBColor;
 use serde::Deserialize;
 
 use std::collections::HashMap;
+use std::fs;
+use std::path::Path;
 
 #[derive(Debug, Deserialize)]
 pub struct Config {
@@ -10,7 +12,13 @@ pub struct Config {
     pub colors: HashMap<String, RGBColor>,
 }
 
-impl Config {}
+impl Config {
+    pub fn from_file(file: &impl AsRef<Path>) -> crate::Result<Self> {
+        let contents = fs::read_to_string(file)?;
+        let config = toml::de::from_str(&contents)?;
+        Ok(config)
+    }
+}
 
 mod hex_color_format {
     use launchpad::RGBColor;
@@ -30,7 +38,7 @@ mod hex_color_format {
             .map_err(serde::de::Error::custom)
     }
 
-    fn parse_hex_color(s: &str) -> Result<RGBColor, ParseHexError> {
+    pub fn parse_hex_color(s: &str) -> Result<RGBColor, ParseHexError> {
         if s.len() != 6 {
             return Err(ParseHexError::InvalidLength);
         }
@@ -61,7 +69,7 @@ mod hex_color_format {
         }
     }
 
-    pub(super) fn parse_hex(s: &str) -> Result<u8, ParseHexError> {
+    pub fn parse_hex(s: &str) -> Result<u8, ParseHexError> {
         if s.len() > 2 {
             return Err(ParseHexError::InvalidLength);
         }
@@ -89,6 +97,8 @@ mod hex_color_format {
 
 #[cfg(test)]
 mod tests {
+    use launchpad::RGBColor;
+
     use super::hex_color_format::*;
 
     #[test]
@@ -102,5 +112,10 @@ mod tests {
             index: 1,
         }));
         assert_eq!(parse_hex("FFFFFF"), Err(ParseHexError::InvalidLength));
+    }
+
+    #[test]
+    fn test_color_parse() {
+        assert_eq!(parse_hex_color("FF34A8"), Ok(RGBColor::new(255, 67, 138)));
     }
 }

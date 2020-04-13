@@ -1,20 +1,23 @@
-pub mod config;
-use config::*;
-
 use i3ipc::{reply::*, I3Connection};
 
 use launchpad::mk2::*;
-use launchpad::*;
+use launchpad::RGBColor;
 
 use std::collections::HashMap;
 
-fn main() {
-    let mut connection = I3Connection::connect().unwrap();
-    let mut launchpad = MidiLaunchpadMk2::autodetect().unwrap();
+pub mod config;
+use config::*;
 
-    println!("{}", connection.get_version().unwrap().human_readable);
+mod error;
+pub use error::*;
 
-    // config
+fn main() -> crate::Result<()> {
+    let mut connection = I3Connection::connect()?;
+    let mut launchpad = MidiLaunchpadMk2::autodetect()?;
+
+    println!("{}", connection.get_version()?.human_readable);
+
+    // TODO config
     let mut colors: HashMap<String, RGBColor> = HashMap::new();
     colors.insert("Firefox".to_string(), RGBColor::new(0xFF, 0x6A, 0x11));
     colors.insert("Emacs".to_string(), RGBColor::new(0xC1, 0x33, 0xFF));
@@ -30,26 +33,29 @@ fn main() {
     // let mut last_workspace_windows = None;
     let mut last_buffer = None;
 
+    // TODO program flow
     loop {
-        let workspaces = connection.get_workspaces().unwrap().workspaces;
+        let workspaces = connection.get_workspaces()?.workspaces;
 
-        let root: i3ipc::reply::Node = connection.get_tree().unwrap();
+        let root: i3ipc::reply::Node = connection.get_tree()?;
         let workspace_windows = find_workspace_windows(&root);
 
         for event in launchpad.poll() {
-            program.handle_event(&event, &mut connection, &workspaces, &workspace_windows);
+            program.handle_event(&event, &mut connection, &workspaces, &workspace_windows)?;
         }
 
         let mut buffer = LaunchpadBuffer::default();
         program.render(&mut buffer, &workspaces, workspace_windows);
 
         if Some(&buffer) != last_buffer.as_ref() {
-            buffer.render(&mut launchpad).unwrap();
+            buffer.render(&mut launchpad)?;
             last_buffer = Some(buffer);
         }
 
         std::thread::sleep(std::time::Duration::from_millis(5));
     }
+
+    Ok(())
 }
 
 #[derive(Clone, Default, PartialEq)]
@@ -106,8 +112,7 @@ impl Program {
         for (x, workspace) in workspaces.iter().take(8).enumerate() {
             if let Some(windows) = &workspace_windows.get(&workspace.name) {
                 for (y, window) in windows.iter().take(8).enumerate() {
-                    let class: &str =
-                        &window.window_properties.as_ref().unwrap()[&WindowProperty::Class];
+                    let class: &str = &window.window_properties.as_ref().unwrap()[&WindowProperty::Class];
 
                     let color = if let Some(color) = &self.config.colors.get(class) {
                         *color.clone()
@@ -123,15 +128,16 @@ impl Program {
         }
     }
 
-    pub fn handle_event(&mut self, event: &Event, connection: &mut I3Connection, workspaces: &Vec<Workspace>, workspace_windows: &HashMap<String, Vec<&Node>>) {
+    pub fn handle_event(
+        &mut self, event: &Event, connection: &mut I3Connection, workspaces: &Vec<Workspace>,
+        workspace_windows: &HashMap<String, Vec<&Node>>,
+    ) -> crate::Result<()> {
         match event {
             Event::Press(Location::Pad(x, y)) => {
                 if let Some(workspace) = workspaces.get(*x as usize) {
                     if let Some(windows) = &workspace_windows.get(&workspace.name) {
                         if let Some(window) = windows.get(*y as usize) {
-                            connection
-                                .run_command(&format!("[con_id=\"{}\"] focus", window.id))
-                                .unwrap();
+                            connection.run_command(&format!("[con_id=\"{}\"] focus", window.id))?;
                         } else {
                             connection
                                 .run_command(&format!("workspace {}", workspace.name))
@@ -142,6 +148,8 @@ impl Program {
             }
             _ => {}
         }
+
+        Ok(())
     }
 }
 
