@@ -9,3 +9,5 @@ clap = "2.33.0"
 i3ipc = "0.10.0"
 # launchpad = { git = "https://github.com/cassaundra/launch-rs.git" }
 launchpad = { path = "../launch-rs" }
+serde = { version = "1.0.106", features = ["derive"] }
+toml = "0.5.6"
