@@ -14,6 +14,8 @@ pub struct Config {
     pub default_color: RGBColor,
     #[serde(deserialize_with = "hex_color_format::deserialize_map")]
     pub class_colors: HashMap<String, RGBColor>,
+    #[serde(deserialize_with = "hex_color_format::deserialize_map")]
+    pub title_colors: HashMap<String, RGBColor>,
 }
 
 impl Config {
