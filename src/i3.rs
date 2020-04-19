@@ -1,17 +1,17 @@
-use i3ipc::{reply::*, I3Connection};
+use i3ipc::reply::*;
 
-use std::collections::HashMap;
+use std::collections::BTreeMap;
 
-pub fn find_workspace_windows(node: &Node) -> HashMap<String, Vec<&Node>> {
-    let mut layout: HashMap<String, Vec<&Node>> = HashMap::new();
-    for (workspace, window) in find_workspace_windows_rec(node, None) {
+pub fn find_workspaces(node: &Node) -> Vec<(String, Vec<&Node>)> {
+    let mut layout: BTreeMap<String, Vec<&Node>> = BTreeMap::new();
+    for (workspace, window) in find_workspaces_rec(node, None) {
         layout.entry(workspace).or_default().push(window)
     }
-    layout
+    layout.into_iter().collect()
 }
 
-fn find_workspace_windows_rec(node: &Node, mut workspace: Option<String>) -> Vec<(String, &Node)> {
-    let mut windows = vec![];
+fn find_workspaces_rec(node: &Node, mut workspace: Option<String>) -> Vec<(String, &Node)> {
+    let mut windows = vec![]; // TODO with capacity?
 
     if is_workspace(node) {
         workspace = node.name.clone();
@@ -20,7 +20,7 @@ fn find_workspace_windows_rec(node: &Node, mut workspace: Option<String>) -> Vec
     }
 
     for child in &node.nodes {
-        windows.extend(find_workspace_windows_rec(child, workspace.clone()));
+        windows.extend(find_workspaces_rec(child, workspace.clone()));
     }
 
     windows

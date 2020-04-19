@@ -16,3 +16,7 @@ default_color = "808080"
 "konsole" = "161720"
 "Xfce4-terminal" = "161720"
 "XTerm" = "161720"
+
+# Launchpad RGB colors by window title
+# Note that this will override a value set as a class color.
+[title_colors]
