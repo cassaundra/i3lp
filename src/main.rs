@@ -63,6 +63,7 @@ impl Program {
 
         for (x, (_workspace, windows)) in workspaces.iter().take(8).enumerate() {
             for (y, window) in windows.iter().take(8).enumerate() {
+                let (x, y) = ui::rotate_coords((x as u8, y as u8), &self.config.side);
                 let class: &str =
                     &window.window_properties.as_ref().unwrap()[&WindowProperty::Class];
 
@@ -87,8 +88,9 @@ impl Program {
 
         match event {
             Event::Press(Location::Pad(x, y)) => {
-                if let Some((workspace, windows)) = workspaces.get(*x as usize) {
-                    if let Some(window) = &windows.get(*y as usize) {
+                let (x, y) = ui::unrotate_coords((*x, *y), &self.config.side);
+                if let Some((workspace, windows)) = workspaces.get(x as usize) {
+                    if let Some(window) = &windows.get(y as usize) {
                         self.connection
                             .run_command(&format!("[con_id=\"{}\"] focus", window.id))?;
                     } else {

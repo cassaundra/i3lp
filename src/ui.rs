@@ -1,6 +1,8 @@
 use launchpad::mk2::*;
 use launchpad::RGBColor;
 
+use crate::config::Side;
+
 #[derive(Clone, Default, PartialEq)]
 pub struct LaunchpadBuffer {
     grid: [[RGBColor; 8]; 8],
@@ -34,5 +36,23 @@ impl LaunchpadBuffer {
         }
 
         launchpad.light_multi_rgb(buffer)
+    }
+}
+
+pub fn rotate_coords(coords: (u8, u8), side: &Side) -> (u8, u8) {
+    match side {
+        Side::Bottom => coords,
+        Side::Top => (7 - coords.0, 7 - coords.1),
+        Side::Left => (coords.1, 7 - coords.0),
+        Side::Right => (7 - coords.1, coords.0),
+    }
+}
+
+pub fn unrotate_coords(coords: (u8, u8), side: &Side) -> (u8, u8) {
+    match side {
+        Side::Bottom => coords,
+        Side::Top => rotate_coords(coords, &Side::Top),
+        Side::Left => rotate_coords(coords, &Side::Right),
+        Side::Right => rotate_coords(coords, &Side::Left),
     }
 }
